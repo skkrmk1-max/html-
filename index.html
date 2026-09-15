@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- iOS에서 확대/축소가 필요하므로 user-scalable 제한을 제거 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>공간 불평등 지도 (B4 가로)</title>
     <style>
@@ -15,15 +14,8 @@
             -webkit-text-size-adjust: 100%;
         }
 
-        /* 화면 크기에 맞춰 B4 용지를 축소해서 보여주는 무대 */
-        .stage {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            overflow: hidden;
-        }
+        .stage { width: 100%; display: flex; justify-content: center; overflow: hidden; }
 
-        /* B4 가로 비율 컨테이너 (364mm x 257mm) */
         .b4-container {
             width: 364mm;
             height: 257mm;
@@ -38,7 +30,6 @@
             transform-origin: top center;
         }
 
-        /* 상단 헤더 영역 */
         .header {
             display: flex; justify-content: space-between; align-items: flex-end;
             border-bottom: 2px solid #1e293b;
@@ -46,6 +37,7 @@
         }
         .header h1 { margin: 0; font-size: 24px; color: #0f172a; font-weight: 800; letter-spacing: -0.5px; }
         .student-info { display: flex; gap: 12px; }
+        .student-info label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
         .student-info input {
             border: none; border-bottom: 1px solid #94a3b8;
             padding: 4px; font-size: 15px; text-align: center; width: 120px;
@@ -54,71 +46,63 @@
         }
         .student-info input:focus { outline: none; border-bottom-color: #3b82f6; }
 
-        /* 상태 및 버튼 영역 */
-        .controls {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-        }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 12px; }
         .controls p { margin: 0; font-size: 14px; font-weight: 700; color: #475569; letter-spacing: -0.3px; }
-        .btn-group { display: flex; gap: 10px; }
+        .btn-group { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
         button {
             padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;
             cursor: pointer; font-size: 14px; transition: 0.2s;
             font-family: inherit; -webkit-appearance: none; appearance: none;
             touch-action: manipulation;
         }
+        button:disabled { opacity: 0.6; cursor: wait; }
         .undo-btn { background: #64748b; color: white; }
         .undo-btn:hover { background: #475569; }
         .undo-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .print-btn { background: #ef4444; color: white; }
-        .print-btn:hover { background: #dc2626; }
+        .pdf-btn { background: #dc2626; color: white; }
+        .print-btn { background: #94a3b8; color: white; }
         .zoom-btn { background: #0f172a; color: white; }
 
-        /* 지도 및 가이드 래퍼 */
-        .map-wrapper {
-            flex: 1.2;
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            min-height: 0;
+        .notice {
+            display: none;
+            margin: 0 0 10px 0; padding: 9px 12px;
+            background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px;
+            font-size: 13px; color: #1e40af; line-height: 1.5; word-break: keep-all;
+            align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+        .notice.show { display: flex; }
+        .notice.warn { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+        .notice a.download-link {
+            display: inline-block; padding: 6px 12px; border-radius: 6px;
+            background: #dc2626; color: #fff; text-decoration: none; font-weight: bold;
         }
 
-        /* 지도 영역 */
+        .map-wrapper { flex: 1.2; display: flex; gap: 15px; margin-bottom: 15px; min-height: 0; }
+
         .map-section {
             flex: 3.5;
             position: relative; background: #f8fafc;
             border: 2px solid #cbd5e1; border-radius: 8px;
             overflow: hidden; cursor: crosshair;
-            touch-action: none;           /* iOS에서 탭/드래그가 스크롤로 먹히지 않도록 */
+            touch-action: none;
         }
         .world-map-img {
             width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none;
             -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
         }
 
-        /* 작성 방법 가이드 영역 */
         .guide-section {
-            flex: 1;
-            background: #fdfce8;
-            border: 2px solid #fef08a;
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            flex: 1; background: #fdfce8; border: 2px solid #fef08a; border-radius: 8px;
+            padding: 15px; display: flex; flex-direction: column; justify-content: center;
         }
         .guide-section h3 {
             margin: 0 0 10px 0; font-size: 15px; color: #ca8a04;
             border-bottom: 1px dashed #fde047; padding-bottom: 6px;
         }
-        .guide-section ol {
-            margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: #333;
-        }
+        .guide-section ol { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: #333; }
         .guide-section li { margin-bottom: 8px; word-break: keep-all; }
-        .guide-note {
-            display: block; margin-top: 4px; font-size: 12px; color: #ea580c; font-weight: bold;
-        }
+        .guide-note { display: block; margin-top: 4px; font-size: 12px; color: #ea580c; font-weight: bold; }
 
-        /* 핀 스타일 */
         .pin {
             position: absolute;
             width: 50px; height: 50px;
@@ -131,19 +115,13 @@
         }
         .pin:active { cursor: grabbing; z-index: 20; }
 
-        /* 5개 카드 영역 */
-        .cards-section {
-            flex: 1.3;
-            display: flex; gap: 12px; justify-content: space-between;
-            min-height: 0;
-        }
+        .cards-section { flex: 1.3; display: flex; gap: 12px; justify-content: space-between; min-height: 0; }
         .card {
             flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px;
             display: flex; flex-direction: column; gap: 10px; background: #f8fafc;
             opacity: 0.5; pointer-events: none; transition: 0.3s;
             min-height: 0;
         }
-
         .card.card-red.active {
             opacity: 1; pointer-events: auto; background: #fff;
             border-color: #ef4444; box-shadow: 0 4px 8px rgba(239, 68, 68, 0.1);
@@ -161,40 +139,29 @@
             flex-shrink: 0;
         }
 
-        /* 사진 업로드 영역 */
         .photo-upload-box {
-            height: 130px;
-            flex-shrink: 0;
+            height: 130px; flex-shrink: 0;
             border: 2px dashed #94a3b8; border-radius: 6px;
             display: flex; justify-content: center; align-items: center;
             position: relative; background: #f1f5f9; overflow: hidden;
         }
-        /* iOS에서 확실히 동작하도록 label 전체를 터치 영역으로 사용 */
         .photo-upload-box .upload-label {
             position: absolute; inset: 0;
             display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 5;
-            touch-action: manipulation;
+            cursor: pointer; z-index: 5; touch-action: manipulation;
         }
         .photo-upload-box input[type="file"] {
             position: absolute; width: 1px; height: 1px;
             opacity: 0; overflow: hidden; border: 0; padding: 0;
             clip: rect(0 0 0 0); clip-path: inset(50%);
         }
-        .photo-upload-box .upload-label span {
-            font-size: 13px; font-weight: bold; color: #64748b; pointer-events: none;
-        }
+        .photo-upload-box .upload-label span { font-size: 13px; font-weight: bold; color: #64748b; pointer-events: none; }
         .preview-img {
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%; object-fit: contain; display: none; background: #fff; z-index: 1;
         }
 
-        /* 글 작성 영역 */
-        .text-box {
-            flex: 1;
-            display: flex; flex-direction: column; gap: 6px;
-            min-height: 0;
-        }
+        .text-box { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
         .text-box input {
             flex-shrink: 0;
             border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit;
@@ -208,25 +175,66 @@
         }
         .text-box input:focus, .text-box textarea:focus { outline: 2px solid #3b82f6; border-color: transparent; }
 
-        /* 터치 기기: 입력창 글자가 16px 미만이면 사파리가 화면을 멋대로 확대하므로 16px로 고정 */
+        .print-mirror { display: none; }
+
+        /* PDF 캡처용 복제본이 놓이는 자리 (화면 밖) */
+        #captureHolder {
+            position: fixed; left: -20000px; top: 0; z-index: -1;
+            width: 364mm; background: #fff;
+        }
+        #captureHolder .b4-container { box-shadow: none; transform: none !important; }
+        #captureHolder .controls, #captureHolder .notice,
+        #captureHolder .upload-label { display: none !important; }
+        #captureHolder .card { opacity: 1 !important; }
+        #captureHolder .pin { filter: none !important; }
+        #captureHolder .capture-text {
+            white-space: pre-wrap; word-wrap: break-word; word-break: break-word;
+            font-size: 13px; line-height: 1.5; color: #111;
+            border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px;
+            background: #fff; overflow: hidden;
+        }
+        #captureHolder .capture-text.is-area { flex: 1; min-height: 0; }
+        #captureHolder .capture-text.is-line { flex-shrink: 0; min-height: 32px; }
+        #captureHolder .student-info .capture-text {
+            border: none; border-bottom: 1px solid #333; border-radius: 0;
+            width: 120px; text-align: center; padding: 4px 2px; min-height: 26px; font-size: 14px;
+        }
+
         @media (hover: none) and (pointer: coarse) {
             .text-box input, .text-box textarea, .student-info input { font-size: 16px; }
         }
 
-        /* ================= 인쇄(PDF) 전용 스타일 ================= */
+        /* ================= 인쇄(백업용) 스타일 ================= */
         @media print {
-            @page { size: B4 landscape; margin: 0; }
-            body { background: #fff; padding: 0; display: block; }
-            .stage { height: auto !important; overflow: visible; display: block; }
+            @page { size: 364mm 257mm; margin: 0; }
+            html, body { background: #fff !important; padding: 0 !important; margin: 0 !important; width: 364mm; }
+            body { display: block !important; }
+            #captureHolder { display: none !important; }
+            .stage { display: block !important; height: auto !important; overflow: visible !important; width: 364mm !important; }
             .b4-container {
-                width: 100%; height: 100vh; box-shadow: none; padding: 12mm; page-break-inside: avoid;
-                transform: none !important;
+                width: 364mm !important; height: 257mm !important;
+                transform: none !important; box-shadow: none !important;
+                padding: 12mm !important; overflow: hidden !important;
+                page-break-inside: avoid; break-inside: avoid; page-break-after: avoid;
             }
-            .controls, .photo-upload-box .upload-label { display: none !important; }
+            .controls, .notice, .photo-upload-box .upload-label { display: none !important; }
             .card { opacity: 1 !important; border: 1px solid #999 !important; box-shadow: none !important; }
             .guide-section { border: 1px solid #999 !important; background: #fff !important; }
-            .text-box input, .text-box textarea { border: 1px solid #999 !important; font-size: 13px !important; }
             .photo-upload-box { border: 1px dashed #999; }
+            .pin { filter: none !important; }
+            .text-box input, .text-box textarea, .student-info input { display: none !important; }
+            .print-mirror {
+                display: block !important;
+                white-space: pre-wrap; word-wrap: break-word; word-break: break-word;
+                font-size: 12px; line-height: 1.5; color: #111;
+                border: 1px solid #999; border-radius: 4px; padding: 7px; background: #fff; overflow: hidden;
+            }
+            .text-box .print-input { flex-shrink: 0; min-height: 30px; }
+            .text-box .print-textarea { flex: 1; min-height: 0; }
+            .student-info .print-input {
+                border: none; border-bottom: 1px solid #333; border-radius: 0;
+                width: 120px; text-align: center; padding: 4px 2px; min-height: 24px; font-size: 13px;
+            }
             img, svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
@@ -238,24 +246,26 @@
     <div class="header">
         <h1>🌍 공간 불평등 지도</h1>
         <div class="student-info">
-            <label>학번: <input type="text" placeholder="예: 20101"></label>
-            <label>이름: <input type="text" placeholder="이름"></label>
+            <label>학번: <input type="text" id="sid" placeholder="예: 20101"></label>
+            <label>이름: <input type="text" id="sname" placeholder="이름"></label>
         </div>
     </div>
 
     <div class="controls">
         <p id="statusText">지도를 터치하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: 0/5)</p>
         <div class="btn-group">
-            <button class="zoom-btn" id="zoomBtn" type="button">🔍 원본 크기로 보기</button>
-            <button class="undo-btn" id="undoBtn" type="button" disabled>↩️ 마지막 핀 취소</button>
-            <button class="print-btn" id="printBtn" type="button">🖨️ PDF 저장 및 인쇄</button>
+            <button class="zoom-btn" id="zoomBtn" type="button">🔍 원본 크기</button>
+            <button class="undo-btn" id="undoBtn" type="button" disabled>↩️ 핀 취소</button>
+            <button class="pdf-btn" id="pdfBtn" type="button">📄 B4 가로 PDF 저장</button>
+            <button class="print-btn" id="printBtn" type="button">🖨️ 인쇄</button>
         </div>
     </div>
 
-    <!-- 지도 및 가이드 영역 -->
+    <p class="notice" id="notice"></p>
+
     <div class="map-wrapper">
         <div class="map-section" id="mapArea">
-            <img src="https://i.postimg.cc/q7HhpRqL/ikwol-eoseu-dobeob.jpg" alt="세계지도" class="world-map-img">
+            <img src="https://i.postimg.cc/q7HhpRqL/ikwol-eoseu-dobeob.jpg" alt="세계지도" class="world-map-img" id="worldMap">
         </div>
 
         <div class="guide-section">
@@ -269,11 +279,14 @@
         </div>
     </div>
 
-    <!-- 5개 카드 영역 -->
     <div class="cards-section" id="cardsSection"></div>
 </div>
 </div>
 
+<div id="captureHolder" aria-hidden="true"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function () {
     "use strict";
@@ -286,13 +299,15 @@
         "기후 변화가 긍정적인 영향을 미친 지역"
     ];
 
-    /* ---------- 카드 생성 (document.write 대신 DOM으로 생성) ---------- */
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+
+    /* ---------- 카드 생성 ---------- */
     var cardsSection = document.getElementById('cardsSection');
     var cardsHtml = '';
     for (var i = 1; i <= 5; i++) {
-        var isBlue = (i === 5);
-        var colorClass = isBlue ? 'card-blue' : 'card-red';
-        var iconColor = isBlue ? '#3b82f6' : '#ef4444';
+        var colorClass = (i === 5) ? 'card-blue' : 'card-red';
+        var iconColor = (i === 5) ? '#3b82f6' : '#ef4444';
         cardsHtml +=
             '<div class="card ' + colorClass + '" id="card-' + i + '">' +
                 '<div class="card-header" style="color:' + iconColor + ';">📍 ' + i + '. ' + regionThemes[i - 1] + '</div>' +
@@ -309,46 +324,52 @@
     }
     cardsSection.innerHTML = cardsHtml;
 
-    /* ---------- 사진 업로드 (FileReader 사용: iOS HEIC·인쇄 문제 방지) ---------- */
+    /* ---------- 사진 업로드 ---------- */
     function handleFile(event) {
         var input = event.target;
         var index = input.getAttribute('data-index');
         var file = input.files && input.files[0];
         if (!file) return;
-
         var preview = document.getElementById('preview-' + index);
-        var label = input.parentNode.querySelector('.upload-label');
         var reader = new FileReader();
-
         reader.onload = function (e) {
             preview.src = e.target.result;
             preview.style.display = 'block';
-            if (label) label.style.background = 'transparent';
             var ph = document.getElementById('placeholder-' + index);
             if (ph) ph.textContent = '🔄 사진 바꾸기';
         };
-        reader.onerror = function () {
-            alert('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해 주세요.');
-        };
+        reader.onerror = function () { alert('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해 주세요.'); };
         reader.readAsDataURL(file);
     }
     for (var f = 1; f <= 5; f++) {
         document.getElementById('file-' + f).addEventListener('change', handleFile);
     }
 
-    /* ---------- 핀 찍기 / 드래그 (포인터 이벤트로 통일) ---------- */
+    /* ---------- 지도 이미지를 data URL로 변환 (PDF 생성 시 캔버스 오염 방지) ---------- */
+    var worldMap = document.getElementById('worldMap');
+    (function inlineMapImage() {
+        var src = worldMap.getAttribute('src');
+        if (!src || src.indexOf('data:') === 0) return;
+        if (!window.fetch) return;
+        fetch(src, { mode: 'cors' })
+            .then(function (r) { if (!r.ok) throw new Error('fetch fail'); return r.blob(); })
+            .then(function (blob) {
+                return new Promise(function (resolve, reject) {
+                    var fr = new FileReader();
+                    fr.onload = function () { resolve(fr.result); };
+                    fr.onerror = reject;
+                    fr.readAsDataURL(blob);
+                });
+            })
+            .then(function (dataUrl) { worldMap.src = dataUrl; })
+            .catch(function () { /* 실패해도 화면 표시에는 문제 없음 */ });
+    })();
+
+    /* ---------- 핀 찍기 / 드래그 ---------- */
     var mapArea = document.getElementById('mapArea');
     var undoBtn = document.getElementById('undoBtn');
     var statusText = document.getElementById('statusText');
-    var pins = [];
-    var pinCount = 0;
-    var maxPins = 5;
-    var downPoint = null;
-
-    function getScale() {
-        var sheet = document.getElementById('sheet');
-        return sheet.getBoundingClientRect().width / sheet.offsetWidth || 1;
-    }
+    var pins = [], pinCount = 0, maxPins = 5, downPoint = null;
 
     function percentFromEvent(clientX, clientY) {
         var rect = mapArea.getBoundingClientRect();
@@ -366,16 +387,11 @@
     mapArea.addEventListener('pointerup', function (e) {
         if (e.target.closest('.pin')) return;
         if (!downPoint) return;
-
         var moved = Math.abs(e.clientX - downPoint.x) + Math.abs(e.clientY - downPoint.y);
         var elapsed = Date.now() - downPoint.t;
         downPoint = null;
-        if (moved > 12 || elapsed > 1200) return;   // 드래그·길게 누르기는 무시
-
-        if (pinCount >= maxPins) {
-            alert('최대 5곳까지만 표시할 수 있습니다.');
-            return;
-        }
+        if (moved > 12 || elapsed > 1200) return;
+        if (pinCount >= maxPins) { alert('최대 5곳까지만 표시할 수 있습니다.'); return; }
 
         pinCount++;
         var pos = percentFromEvent(e.clientX, e.clientY);
@@ -403,23 +419,18 @@
 
     function setupDrag(pinElement) {
         var dragging = false;
-
         pinElement.addEventListener('pointerdown', function (e) {
-            e.stopPropagation();
-            e.preventDefault();
+            e.stopPropagation(); e.preventDefault();
             dragging = true;
             try { pinElement.setPointerCapture(e.pointerId); } catch (err) {}
         });
-
         pinElement.addEventListener('pointermove', function (e) {
             if (!dragging) return;
-            e.stopPropagation();
-            e.preventDefault();
+            e.stopPropagation(); e.preventDefault();
             var pos = percentFromEvent(e.clientX, e.clientY);
             pinElement.style.left = pos.x + '%';
             pinElement.style.top = pos.y + '%';
         });
-
         function stop(e) {
             if (!dragging) return;
             e.stopPropagation();
@@ -432,23 +443,16 @@
 
     function undoPin() {
         if (pins.length === 0) return;
-        var lastPin = pins.pop();
-        mapArea.removeChild(lastPin);
-
+        mapArea.removeChild(pins.pop());
         var card = document.getElementById('card-' + pinCount);
         card.classList.remove('active');
         card.querySelector('input[type="text"]').value = '';
         card.querySelector('textarea').value = '';
-
         var preview = document.getElementById('preview-' + pinCount);
-        var placeholder = document.getElementById('placeholder-' + pinCount);
-        var fileInput = document.getElementById('file-' + pinCount);
-
         preview.style.display = 'none';
         preview.removeAttribute('src');
-        placeholder.textContent = '📷 터치하여 사진 추가';
-        fileInput.value = '';
-
+        document.getElementById('placeholder-' + pinCount).textContent = '📷 터치하여 사진 추가';
+        document.getElementById('file-' + pinCount).value = '';
         pinCount--;
         updateUI();
     }
@@ -457,11 +461,9 @@
         statusText.textContent = '지도를 터치하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: ' + pinCount + '/' + maxPins + ')';
         undoBtn.disabled = (pinCount === 0);
     }
-
     undoBtn.addEventListener('click', undoPin);
-    document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
 
-    /* ---------- 화면 폭에 맞춰 B4 용지를 자동 축소 ---------- */
+    /* ---------- 화면 맞춤 축소 ---------- */
     var stage = document.getElementById('stage');
     var sheet = document.getElementById('sheet');
     var fitMode = true;
@@ -484,14 +486,170 @@
 
     document.getElementById('zoomBtn').addEventListener('click', function () {
         fitMode = !fitMode;
-        this.textContent = fitMode ? '🔍 원본 크기로 보기' : '↔️ 화면에 맞추기';
+        this.textContent = fitMode ? '🔍 원본 크기' : '↔️ 화면 맞춤';
         applyScale();
     });
-
     window.addEventListener('resize', applyScale);
     window.addEventListener('orientationchange', function () { setTimeout(applyScale, 300); });
     window.addEventListener('load', applyScale);
     applyScale();
+
+    /* ---------- 안내 문구 ---------- */
+    var notice = document.getElementById('notice');
+    function showNotice(html, isWarn) {
+        notice.innerHTML = html;
+        notice.classList.add('show');
+        notice.classList.toggle('warn', !!isWarn);
+    }
+    function hideNotice() { notice.classList.remove('show'); notice.innerHTML = ''; }
+
+    /* ---------- 인쇄(백업) ---------- */
+    function buildPrintMirrors() {
+        var old = document.querySelectorAll('.print-mirror');
+        for (var i = 0; i < old.length; i++) { old[i].parentNode.removeChild(old[i]); }
+        function mirror(field, cls) {
+            var d = document.createElement('div');
+            d.className = 'print-mirror ' + cls;
+            d.textContent = field.value || '';
+            field.parentNode.insertBefore(d, field.nextSibling);
+        }
+        var list = document.querySelectorAll('.text-box input[type="text"]');
+        for (var a = 0; a < list.length; a++) { mirror(list[a], 'print-input'); }
+        var areas = document.querySelectorAll('.text-box textarea');
+        for (var b = 0; b < areas.length; b++) { mirror(areas[b], 'print-textarea'); }
+        var infos = document.querySelectorAll('.student-info input');
+        for (var c = 0; c < infos.length; c++) { mirror(infos[c], 'print-input'); }
+    }
+
+    var printing = false, savedFitMode = true;
+    function restoreAfterPrint() {
+        if (!printing) return;
+        printing = false;
+        fitMode = savedFitMode;
+        applyScale();
+    }
+    function doPrint() {
+        savedFitMode = fitMode;
+        fitMode = false;
+        applyScale();
+        buildPrintMirrors();
+        printing = true;
+        setTimeout(function () {
+            try { window.print(); }
+            catch (err) { showNotice('이 브라우저에서는 인쇄 창을 열 수 없습니다. 사파리로 열어 주세요.', true); }
+            setTimeout(restoreAfterPrint, 8000);
+        }, 250);
+    }
+    document.getElementById('printBtn').addEventListener('click', doPrint);
+    window.addEventListener('afterprint', restoreAfterPrint);
+    window.addEventListener('focus', function () { setTimeout(restoreAfterPrint, 500); });
+
+    /* ---------- B4 가로 PDF 한 번에 저장 ---------- */
+    var pdfBtn = document.getElementById('pdfBtn');
+    var holder = document.getElementById('captureHolder');
+    var lastBlobUrl = null;
+
+    function fileName() {
+        var sid = (document.getElementById('sid').value || '').trim();
+        var sname = (document.getElementById('sname').value || '').trim();
+        var tail = [sid, sname].filter(Boolean).join('_');
+        return '공간불평등지도' + (tail ? '_' + tail : '') + '.pdf';
+    }
+
+    // 입력창을 글자로 바꾼 복제본 만들기 (html2canvas는 textarea 스크롤 영역을 못 그림)
+    function buildCapture() {
+        holder.innerHTML = '';
+        var clone = sheet.cloneNode(true);
+        clone.id = 'sheetClone';
+        clone.style.transform = 'none';
+
+        function swap(field, cls) {
+            var d = document.createElement('div');
+            d.className = 'capture-text ' + cls;
+            d.textContent = field.value || '';
+            field.parentNode.replaceChild(d, field);
+        }
+
+        var originalLines = sheet.querySelectorAll('.text-box input[type="text"]');
+        var cloneLines = clone.querySelectorAll('.text-box input[type="text"]');
+        for (var a = 0; a < cloneLines.length; a++) { cloneLines[a].value = originalLines[a].value; swap(cloneLines[a], 'is-line'); }
+
+        var originalAreas = sheet.querySelectorAll('.text-box textarea');
+        var cloneAreas = clone.querySelectorAll('.text-box textarea');
+        for (var b = 0; b < cloneAreas.length; b++) { cloneAreas[b].value = originalAreas[b].value; swap(cloneAreas[b], 'is-area'); }
+
+        var originalInfo = sheet.querySelectorAll('.student-info input');
+        var cloneInfo = clone.querySelectorAll('.student-info input');
+        for (var c = 0; c < cloneInfo.length; c++) { cloneInfo[c].value = originalInfo[c].value; swap(cloneInfo[c], 'is-line'); }
+
+        // 파일 입력은 캡처에 불필요
+        var files = clone.querySelectorAll('input[type="file"]');
+        for (var d2 = 0; d2 < files.length; d2++) { files[d2].parentNode.removeChild(files[d2]); }
+
+        holder.appendChild(clone);
+        return clone;
+    }
+
+    function savePdf() {
+        if (typeof window.html2canvas !== 'function' || !window.jspdf || !window.jspdf.jsPDF) {
+            showNotice('PDF 변환 기능을 불러오지 못했습니다(인터넷 차단 가능성). 옆의 🖨️ 인쇄 버튼으로 저장해 주세요.', true);
+            return;
+        }
+
+        pdfBtn.disabled = true;
+        var originalLabel = pdfBtn.textContent;
+        pdfBtn.textContent = '⏳ 만드는 중...';
+        showNotice('B4 가로 PDF를 만들고 있습니다. 5초 정도 걸릴 수 있어요.');
+
+        var clone = buildCapture();
+
+        setTimeout(function () {
+            window.html2canvas(clone, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: clone.offsetWidth,
+                windowHeight: clone.offsetHeight
+            }).then(function (canvas) {
+                var imgData = canvas.toDataURL('image/jpeg', 0.92);
+                var pdf = new window.jspdf.jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: [364, 257],          // B4 가로 (364mm × 257mm)
+                    compress: true
+                });
+                pdf.addImage(imgData, 'JPEG', 0, 0, 364, 257, undefined, 'FAST');
+
+                var name = fileName();
+                var blob = pdf.output('blob');
+                if (lastBlobUrl) { URL.revokeObjectURL(lastBlobUrl); }
+                lastBlobUrl = URL.createObjectURL(blob);
+
+                // 자동 저장 시도
+                try { pdf.save(name); } catch (err) {}
+
+                // 자동 저장이 막히는 환경(아이패드 등)을 위한 직접 누르는 링크
+                showNotice(
+                    '<span>PDF가 만들어졌습니다. 자동으로 저장되지 않았다면 오른쪽 버튼을 눌러 주세요.' +
+                    (isIOS ? ' (열린 뒤 공유 버튼 → ‘파일에 저장’)' : '') + '</span>' +
+                    '<a class="download-link" href="' + lastBlobUrl + '" download="' + name + '" target="_blank" rel="noopener">📄 PDF 열기 · 저장</a>'
+                );
+
+                holder.innerHTML = '';
+                pdfBtn.disabled = false;
+                pdfBtn.textContent = originalLabel;
+            }).catch(function () {
+                holder.innerHTML = '';
+                pdfBtn.disabled = false;
+                pdfBtn.textContent = originalLabel;
+                showNotice('PDF를 만들지 못했습니다. 지도 이미지 접근이 막혔을 수 있습니다. 옆의 🖨️ 인쇄 버튼을 이용해 주세요.', true);
+            });
+        }, 120);
+    }
+
+    pdfBtn.addEventListener('click', function () { hideNotice(); savePdf(); });
 })();
 </script>
 
