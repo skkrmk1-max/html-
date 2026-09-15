@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>공간 불평등 지도 (A4 가로)</title>
+    <title>공간 불평등 지도 (B4 가로)</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
@@ -12,29 +12,30 @@
             display: flex; justify-content: center;
         }
 
-        /* A4 가로 비율 컨테이너 */
-        .a4-container {
-            width: 297mm;
-            height: 210mm;
+        /* B4 가로 비율 컨테이너 (364mm x 257mm) */
+        .b4-container {
+            width: 364mm;
+            height: 257mm;
             background: #fff;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            padding: 8mm 12mm;
+            padding: 10mm 15mm;
             position: relative;
+            overflow: hidden; 
         }
 
         /* 상단 헤더 영역 */
         .header {
             display: flex; justify-content: space-between; align-items: flex-end;
             border-bottom: 2px solid #1e293b;
-            padding-bottom: 5px; margin-bottom: 10px;
+            padding-bottom: 8px; margin-bottom: 10px;
         }
-        .header h1 { margin: 0; font-size: 22px; color: #0f172a; font-weight: 800; letter-spacing: -0.5px; }
-        .student-info { display: flex; gap: 10px; }
+        .header h1 { margin: 0; font-size: 24px; color: #0f172a; font-weight: 800; letter-spacing: -0.5px; }
+        .student-info { display: flex; gap: 12px; }
         .student-info input {
             border: none; border-bottom: 1px solid #94a3b8; 
-            padding: 4px; font-size: 14px; text-align: center; width: 100px;
+            padding: 4px; font-size: 15px; text-align: center; width: 120px;
         }
         .student-info input:focus { outline: none; border-bottom-color: #3b82f6; }
 
@@ -42,11 +43,11 @@
         .controls {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
         }
-        .controls p { margin: 0; font-size: 13px; font-weight: 700; color: #475569; letter-spacing: -0.3px; }
-        .btn-group { display: flex; gap: 8px; }
+        .controls p { margin: 0; font-size: 14px; font-weight: 700; color: #475569; letter-spacing: -0.3px; }
+        .btn-group { display: flex; gap: 10px; }
         button {
-            padding: 6px 14px; border: none; border-radius: 6px; font-weight: bold; 
-            cursor: pointer; font-size: 13px; transition: 0.2s;
+            padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; 
+            cursor: pointer; font-size: 14px; transition: 0.2s;
         }
         .undo-btn { background: #64748b; color: white; }
         .undo-btn:hover { background: #475569; }
@@ -56,10 +57,11 @@
 
         /* 지도 및 가이드 래퍼 */
         .map-wrapper {
-            flex: 1.15;
+            flex: 1.2; 
             display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 15px;
+            margin-bottom: 15px;
+            min-height: 0;
         }
 
         /* 지도 영역 */
@@ -79,21 +81,21 @@
             background: #fdfce8;
             border: 2px solid #fef08a;
             border-radius: 8px;
-            padding: 12px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
         .guide-section h3 {
-            margin: 0 0 10px 0; font-size: 14px; color: #ca8a04;
+            margin: 0 0 10px 0; font-size: 15px; color: #ca8a04;
             border-bottom: 1px dashed #fde047; padding-bottom: 6px;
         }
         .guide-section ol {
-            margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.6; color: #333;
+            margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: #333;
         }
         .guide-section li { margin-bottom: 8px; word-break: keep-all; }
         .guide-note {
-            display: block; margin-top: 4px; font-size: 11px; color: #ea580c; font-weight: bold;
+            display: block; margin-top: 4px; font-size: 12px; color: #ea580c; font-weight: bold;
         }
 
         /* 핀 스타일 */
@@ -110,12 +112,14 @@
         /* 5개 카드 영역 */
         .cards-section {
             flex: 1.3;
-            display: flex; gap: 10px; justify-content: space-between;
+            display: flex; gap: 12px; justify-content: space-between;
+            min-height: 0;
         }
         .card {
-            flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;
-            display: flex; flex-direction: column; gap: 8px; background: #f8fafc;
+            flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px;
+            display: flex; flex-direction: column; gap: 10px; background: #f8fafc;
             opacity: 0.5; pointer-events: none; transition: 0.3s;
+            min-height: 0;
         }
         
         .card.card-red.active {
@@ -128,41 +132,53 @@
         }
 
         .card-header {
-            font-size: 13px; font-weight: 800; color: #1e293b;
-            text-align: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;
-            min-height: 40px; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 800; color: #1e293b;
+            text-align: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;
+            min-height: 45px; display: flex; align-items: center; justify-content: center;
             word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;
+            flex-shrink: 0;
         }
         
+        /* 🔥 사진 업로드 영역 - 높이 약 15% 확대 */
         .photo-upload-box {
-            flex: 1; border: 2px dashed #94a3b8; border-radius: 6px;
+            height: 130px; 
+            flex-shrink: 0;
+            border: 2px dashed #94a3b8; border-radius: 6px;
             display: flex; justify-content: center; align-items: center;
             position: relative; background: #f1f5f9; overflow: hidden;
         }
         .photo-upload-box input[type="file"] {
-            position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+            position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 5;
         }
-        .photo-upload-box span { font-size: 12px; font-weight: bold; color: #64748b; pointer-events: none; }
+        .photo-upload-box span { font-size: 13px; font-weight: bold; color: #64748b; pointer-events: none; z-index: 2; }
         .preview-img {
-            width: 100%; height: 100%; object-fit: contain; display: none; background: #fff;
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; object-fit: contain; display: none; background: #fff; z-index: 1;
         }
 
-        .text-box { display: flex; flex-direction: column; gap: 5px; }
+        /* 글 작성 영역 - 사진 칸이 커진 만큼 자동으로 축소됨 */
+        .text-box { 
+            flex: 1; 
+            display: flex; flex-direction: column; gap: 6px; 
+            min-height: 0; 
+        }
         .text-box input {
-            border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px; font-size: 12px; font-family: inherit;
+            flex-shrink: 0;
+            border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit;
         }
         .text-box textarea {
-            border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px; font-size: 12px; font-family: inherit;
-            resize: none; height: 55px; line-height: 1.5;
+            flex: 1; 
+            border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit;
+            resize: none; line-height: 1.5; 
         }
         .text-box input:focus, .text-box textarea:focus { outline: 2px solid #3b82f6; border-color: transparent; }
 
         /* ================= 인쇄(PDF) 전용 스타일 ================= */
         @media print {
-            @page { size: A4 landscape; margin: 0; }
+            @page { size: B4 landscape; margin: 0; }
             body { background: #fff; padding: 0; display: block; }
-            .a4-container { 
-                width: 100%; height: 100vh; box-shadow: none; padding: 10mm; page-break-inside: avoid;
+            .b4-container { 
+                width: 100%; height: 100vh; box-shadow: none; padding: 12mm; page-break-inside: avoid;
             }
             .controls, input[type="file"] { display: none !important; }
             .card { opacity: 1 !important; border: 1px solid #999 !important; box-shadow: none !important; }
@@ -175,7 +191,7 @@
 </head>
 <body>
 
-<div class="a4-container">
+<div class="b4-container">
     <div class="header">
         <h1>🌍 공간 불평등 지도</h1>
         <div class="student-info">
