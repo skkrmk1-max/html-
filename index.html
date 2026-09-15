@@ -2,27 +2,40 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- iOS에서 확대/축소가 필요하므로 user-scalable 제한을 제거 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>공간 불평등 지도 (B4 가로)</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-            color: #333; background-color: #e2e8f0; margin: 0; padding: 20px;
-            display: flex; justify-content: center;
+            color: #333; background-color: #e2e8f0;
+            padding: 10px 0 24px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* 화면 크기에 맞춰 B4 용지를 축소해서 보여주는 무대 */
+        .stage {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
         }
 
         /* B4 가로 비율 컨테이너 (364mm x 257mm) */
         .b4-container {
             width: 364mm;
             height: 257mm;
+            flex: 0 0 auto;
             background: #fff;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             padding: 10mm 15mm;
             position: relative;
-            overflow: hidden; 
+            overflow: hidden;
+            transform-origin: top center;
         }
 
         /* 상단 헤더 영역 */
@@ -34,8 +47,10 @@
         .header h1 { margin: 0; font-size: 24px; color: #0f172a; font-weight: 800; letter-spacing: -0.5px; }
         .student-info { display: flex; gap: 12px; }
         .student-info input {
-            border: none; border-bottom: 1px solid #94a3b8; 
+            border: none; border-bottom: 1px solid #94a3b8;
             padding: 4px; font-size: 15px; text-align: center; width: 120px;
+            background: transparent; border-radius: 0;
+            -webkit-appearance: none; appearance: none;
         }
         .student-info input:focus { outline: none; border-bottom-color: #3b82f6; }
 
@@ -46,18 +61,21 @@
         .controls p { margin: 0; font-size: 14px; font-weight: 700; color: #475569; letter-spacing: -0.3px; }
         .btn-group { display: flex; gap: 10px; }
         button {
-            padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; 
+            padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;
             cursor: pointer; font-size: 14px; transition: 0.2s;
+            font-family: inherit; -webkit-appearance: none; appearance: none;
+            touch-action: manipulation;
         }
         .undo-btn { background: #64748b; color: white; }
         .undo-btn:hover { background: #475569; }
         .undo-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
         .print-btn { background: #ef4444; color: white; }
         .print-btn:hover { background: #dc2626; }
+        .zoom-btn { background: #0f172a; color: white; }
 
         /* 지도 및 가이드 래퍼 */
         .map-wrapper {
-            flex: 1.2; 
+            flex: 1.2;
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
@@ -70,9 +88,11 @@
             position: relative; background: #f8fafc;
             border: 2px solid #cbd5e1; border-radius: 8px;
             overflow: hidden; cursor: crosshair;
+            touch-action: none;           /* iOS에서 탭/드래그가 스크롤로 먹히지 않도록 */
         }
         .world-map-img {
             width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none;
+            -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
         }
 
         /* 작성 방법 가이드 영역 */
@@ -106,6 +126,8 @@
             cursor: grab;
             filter: drop-shadow(0 4px 5px rgba(0,0,0,0.4));
             z-index: 10;
+            touch-action: none;
+            -webkit-user-select: none; user-select: none;
         }
         .pin:active { cursor: grabbing; z-index: 20; }
 
@@ -121,7 +143,7 @@
             opacity: 0.5; pointer-events: none; transition: 0.3s;
             min-height: 0;
         }
-        
+
         .card.card-red.active {
             opacity: 1; pointer-events: auto; background: #fff;
             border-color: #ef4444; box-shadow: 0 4px 8px rgba(239, 68, 68, 0.1);
@@ -138,52 +160,72 @@
             word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;
             flex-shrink: 0;
         }
-        
-        /* 🔥 사진 업로드 영역 - 높이 약 15% 확대 */
+
+        /* 사진 업로드 영역 */
         .photo-upload-box {
-            height: 130px; 
+            height: 130px;
             flex-shrink: 0;
             border: 2px dashed #94a3b8; border-radius: 6px;
             display: flex; justify-content: center; align-items: center;
             position: relative; background: #f1f5f9; overflow: hidden;
         }
-        .photo-upload-box input[type="file"] {
-            position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 5;
+        /* iOS에서 확실히 동작하도록 label 전체를 터치 영역으로 사용 */
+        .photo-upload-box .upload-label {
+            position: absolute; inset: 0;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 5;
+            touch-action: manipulation;
         }
-        .photo-upload-box span { font-size: 13px; font-weight: bold; color: #64748b; pointer-events: none; z-index: 2; }
+        .photo-upload-box input[type="file"] {
+            position: absolute; width: 1px; height: 1px;
+            opacity: 0; overflow: hidden; border: 0; padding: 0;
+            clip: rect(0 0 0 0); clip-path: inset(50%);
+        }
+        .photo-upload-box .upload-label span {
+            font-size: 13px; font-weight: bold; color: #64748b; pointer-events: none;
+        }
         .preview-img {
-            position: absolute; top: 0; left: 0; 
+            position: absolute; top: 0; left: 0;
             width: 100%; height: 100%; object-fit: contain; display: none; background: #fff; z-index: 1;
         }
 
-        /* 글 작성 영역 - 사진 칸이 커진 만큼 자동으로 축소됨 */
-        .text-box { 
-            flex: 1; 
-            display: flex; flex-direction: column; gap: 6px; 
-            min-height: 0; 
+        /* 글 작성 영역 */
+        .text-box {
+            flex: 1;
+            display: flex; flex-direction: column; gap: 6px;
+            min-height: 0;
         }
         .text-box input {
             flex-shrink: 0;
             border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit;
+            -webkit-appearance: none; appearance: none; background: #fff;
         }
         .text-box textarea {
-            flex: 1; 
+            flex: 1;
             border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit;
-            resize: none; line-height: 1.5; 
+            resize: none; line-height: 1.5;
+            -webkit-appearance: none; appearance: none; background: #fff;
         }
         .text-box input:focus, .text-box textarea:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+
+        /* 터치 기기: 입력창 글자가 16px 미만이면 사파리가 화면을 멋대로 확대하므로 16px로 고정 */
+        @media (hover: none) and (pointer: coarse) {
+            .text-box input, .text-box textarea, .student-info input { font-size: 16px; }
+        }
 
         /* ================= 인쇄(PDF) 전용 스타일 ================= */
         @media print {
             @page { size: B4 landscape; margin: 0; }
             body { background: #fff; padding: 0; display: block; }
-            .b4-container { 
+            .stage { height: auto !important; overflow: visible; display: block; }
+            .b4-container {
                 width: 100%; height: 100vh; box-shadow: none; padding: 12mm; page-break-inside: avoid;
+                transform: none !important;
             }
-            .controls, input[type="file"] { display: none !important; }
+            .controls, .photo-upload-box .upload-label { display: none !important; }
             .card { opacity: 1 !important; border: 1px solid #999 !important; box-shadow: none !important; }
             .guide-section { border: 1px solid #999 !important; background: #fff !important; }
-            .text-box input, .text-box textarea { border: 1px solid #999 !important; }
+            .text-box input, .text-box textarea { border: 1px solid #999 !important; font-size: 13px !important; }
             .photo-upload-box { border: 1px dashed #999; }
             img, svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -191,7 +233,8 @@
 </head>
 <body>
 
-<div class="b4-container">
+<div class="stage" id="stage">
+<div class="b4-container" id="sheet">
     <div class="header">
         <h1>🌍 공간 불평등 지도</h1>
         <div class="student-info">
@@ -201,10 +244,11 @@
     </div>
 
     <div class="controls">
-        <p id="statusText">지도를 클릭하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: 0/5)</p>
+        <p id="statusText">지도를 터치하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: 0/5)</p>
         <div class="btn-group">
-            <button class="undo-btn" id="undoBtn" onclick="undoPin()" disabled>↩️ 마지막 핀 취소</button>
-            <button class="print-btn" onclick="window.print()">🖨️ PDF 저장 및 인쇄</button>
+            <button class="zoom-btn" id="zoomBtn" type="button">🔍 원본 크기로 보기</button>
+            <button class="undo-btn" id="undoBtn" type="button" disabled>↩️ 마지막 핀 취소</button>
+            <button class="print-btn" id="printBtn" type="button">🖨️ PDF 저장 및 인쇄</button>
         </div>
     </div>
 
@@ -213,7 +257,7 @@
         <div class="map-section" id="mapArea">
             <img src="https://i.postimg.cc/q7HhpRqL/ikwol-eoseu-dobeob.jpg" alt="세계지도" class="world-map-img">
         </div>
-        
+
         <div class="guide-section">
             <h3>📝 작성 방법</h3>
             <ol>
@@ -226,175 +270,229 @@
     </div>
 
     <!-- 5개 카드 영역 -->
-    <div class="cards-section">
-        <script>
-            const regionThemes = [
-                "해수면 상승으로 피해를 보는 지역",
-                "가뭄이 심해지는 지역",
-                "자연재해의 위험이 커진 고산지대",
-                "거주하기 어려운 열대지역",
-                "기후 변화가 긍정적인 영향을 미친 지역"
-            ];
-
-            for(let i=1; i<=5; i++) {
-                const isBlue = (i === 5);
-                const colorClass = isBlue ? 'card-blue' : 'card-red';
-                const iconColor = isBlue ? '#3b82f6' : '#ef4444';
-                
-                document.write(`
-                    <div class="card ${colorClass}" id="card-${i}">
-                        <div class="card-header" style="color: ${iconColor};">
-                            📍 ${i}. ${regionThemes[i-1]}
-                        </div>
-                        <div class="photo-upload-box">
-                            <input type="file" accept="image/*" onchange="previewPhoto(event, ${i})">
-                            <span id="placeholder-${i}">📷 터치하여 사진 추가</span>
-                            <img id="preview-${i}" class="preview-img">
-                        </div>
-                        <div class="text-box">
-                            <input type="text" placeholder="지역 이름 입력">
-                            <textarea placeholder="해당 지역이 어떠한 어려움을 겪는지 작성하시오..."></textarea>
-                        </div>
-                    </div>
-                `);
-            }
-        </script>
-    </div>
+    <div class="cards-section" id="cardsSection"></div>
+</div>
 </div>
 
 <script>
-    let pinCount = 0;
-    const maxPins = 5;
-    const mapArea = document.getElementById('mapArea');
-    const undoBtn = document.getElementById('undoBtn');
-    const statusText = document.getElementById('statusText');
-    let pins = [];
+(function () {
+    "use strict";
 
-    // 지도 영역 클릭 시 핀 생성
-    mapArea.addEventListener('click', function(e) {
-        if (e.target.closest('.pin')) return; 
-        
+    var regionThemes = [
+        "해수면 상승으로 피해를 보는 지역",
+        "가뭄이 심해지는 지역",
+        "자연재해의 위험이 커진 고산지대",
+        "거주하기 어려운 열대지역",
+        "기후 변화가 긍정적인 영향을 미친 지역"
+    ];
+
+    /* ---------- 카드 생성 (document.write 대신 DOM으로 생성) ---------- */
+    var cardsSection = document.getElementById('cardsSection');
+    var cardsHtml = '';
+    for (var i = 1; i <= 5; i++) {
+        var isBlue = (i === 5);
+        var colorClass = isBlue ? 'card-blue' : 'card-red';
+        var iconColor = isBlue ? '#3b82f6' : '#ef4444';
+        cardsHtml +=
+            '<div class="card ' + colorClass + '" id="card-' + i + '">' +
+                '<div class="card-header" style="color:' + iconColor + ';">📍 ' + i + '. ' + regionThemes[i - 1] + '</div>' +
+                '<div class="photo-upload-box">' +
+                    '<img id="preview-' + i + '" class="preview-img" alt="">' +
+                    '<label class="upload-label" for="file-' + i + '"><span id="placeholder-' + i + '">📷 터치하여 사진 추가</span></label>' +
+                    '<input type="file" id="file-' + i + '" accept="image/*" data-index="' + i + '">' +
+                '</div>' +
+                '<div class="text-box">' +
+                    '<input type="text" placeholder="지역 이름 입력">' +
+                    '<textarea placeholder="해당 지역이 어떠한 어려움을 겪는지 작성하시오..."></textarea>' +
+                '</div>' +
+            '</div>';
+    }
+    cardsSection.innerHTML = cardsHtml;
+
+    /* ---------- 사진 업로드 (FileReader 사용: iOS HEIC·인쇄 문제 방지) ---------- */
+    function handleFile(event) {
+        var input = event.target;
+        var index = input.getAttribute('data-index');
+        var file = input.files && input.files[0];
+        if (!file) return;
+
+        var preview = document.getElementById('preview-' + index);
+        var label = input.parentNode.querySelector('.upload-label');
+        var reader = new FileReader();
+
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            if (label) label.style.background = 'transparent';
+            var ph = document.getElementById('placeholder-' + index);
+            if (ph) ph.textContent = '🔄 사진 바꾸기';
+        };
+        reader.onerror = function () {
+            alert('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해 주세요.');
+        };
+        reader.readAsDataURL(file);
+    }
+    for (var f = 1; f <= 5; f++) {
+        document.getElementById('file-' + f).addEventListener('change', handleFile);
+    }
+
+    /* ---------- 핀 찍기 / 드래그 (포인터 이벤트로 통일) ---------- */
+    var mapArea = document.getElementById('mapArea');
+    var undoBtn = document.getElementById('undoBtn');
+    var statusText = document.getElementById('statusText');
+    var pins = [];
+    var pinCount = 0;
+    var maxPins = 5;
+    var downPoint = null;
+
+    function getScale() {
+        var sheet = document.getElementById('sheet');
+        return sheet.getBoundingClientRect().width / sheet.offsetWidth || 1;
+    }
+
+    function percentFromEvent(clientX, clientY) {
+        var rect = mapArea.getBoundingClientRect();
+        return {
+            x: Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)),
+            y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+        };
+    }
+
+    mapArea.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('.pin')) return;
+        downPoint = { x: e.clientX, y: e.clientY, t: Date.now() };
+    });
+
+    mapArea.addEventListener('pointerup', function (e) {
+        if (e.target.closest('.pin')) return;
+        if (!downPoint) return;
+
+        var moved = Math.abs(e.clientX - downPoint.x) + Math.abs(e.clientY - downPoint.y);
+        var elapsed = Date.now() - downPoint.t;
+        downPoint = null;
+        if (moved > 12 || elapsed > 1200) return;   // 드래그·길게 누르기는 무시
+
         if (pinCount >= maxPins) {
-            alert("최대 5곳까지만 표시할 수 있습니다.");
+            alert('최대 5곳까지만 표시할 수 있습니다.');
             return;
         }
 
         pinCount++;
-        const rect = mapArea.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        var pos = percentFromEvent(e.clientX, e.clientY);
+        var pinColor = (pinCount === 5) ? '#3b82f6' : '#ef4444';
 
-        const isBlue = (pinCount === 5);
-        const pinColor = isBlue ? '#3b82f6' : '#ef4444';
-
-        const pin = document.createElement('div');
+        var pin = document.createElement('div');
         pin.className = 'pin';
-        pin.style.left = x + '%';
-        pin.style.top = y + '%';
-        
-        pin.innerHTML = `
-            <svg viewBox="0 0 24 24" width="100%" height="100%">
-                <path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="${pinColor}"/>
-                <circle cx="12" cy="9" r="6" fill="white"/>
-                <text x="12" y="13.2" font-size="11" font-family="sans-serif" font-weight="bold" fill="${pinColor}" text-anchor="middle">${pinCount}</text>
-            </svg>
-        `;
-        
-        setupDrag(pin);
+        pin.style.left = pos.x + '%';
+        pin.style.top = pos.y + '%';
+        pin.innerHTML =
+            '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+              '<path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="' + pinColor + '"/>' +
+              '<circle cx="12" cy="9" r="6" fill="white"/>' +
+              '<text x="12" y="13.2" font-size="11" font-family="sans-serif" font-weight="bold" fill="' + pinColor + '" text-anchor="middle">' + pinCount + '</text>' +
+            '</svg>';
 
+        setupDrag(pin);
         mapArea.appendChild(pin);
         pins.push(pin);
-        
-        document.getElementById(`card-${pinCount}`).classList.add('active');
+        document.getElementById('card-' + pinCount).classList.add('active');
         updateUI();
     });
 
-    // 핀 드래그 기능 함수
+    mapArea.addEventListener('pointercancel', function () { downPoint = null; });
+
     function setupDrag(pinElement) {
-        let isDragging = false;
-        
-        const startDrag = (e) => {
-            e.stopPropagation(); 
-            isDragging = true;
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('touchmove', onDrag, { passive: false });
-            document.addEventListener('mouseup', endDrag);
-            document.addEventListener('touchend', endDrag);
-        };
+        var dragging = false;
 
-        const onDrag = (e) => {
-            if (!isDragging) return;
-            e.preventDefault(); 
-            
-            const rect = mapArea.getBoundingClientRect();
-            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        pinElement.addEventListener('pointerdown', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            dragging = true;
+            try { pinElement.setPointerCapture(e.pointerId); } catch (err) {}
+        });
 
-            let newX = ((clientX - rect.left) / rect.width) * 100;
-            let newY = ((clientY - rect.top) / rect.height) * 100;
+        pinElement.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            e.stopPropagation();
+            e.preventDefault();
+            var pos = percentFromEvent(e.clientX, e.clientY);
+            pinElement.style.left = pos.x + '%';
+            pinElement.style.top = pos.y + '%';
+        });
 
-            newX = Math.max(0, Math.min(100, newX));
-            newY = Math.max(0, Math.min(100, newY));
-
-            pinElement.style.left = newX + '%';
-            pinElement.style.top = newY + '%';
-        };
-
-        const endDrag = () => {
-            isDragging = false;
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('touchmove', onDrag);
-            document.removeEventListener('mouseup', endDrag);
-            document.removeEventListener('touchend', endDrag);
-        };
-
-        pinElement.addEventListener('mousedown', startDrag);
-        pinElement.addEventListener('touchstart', startDrag, { passive: false });
-    }
-
-    // 마지막 핀 실행 취소
-    function undoPin() {
-        if (pins.length > 0) {
-            const lastPin = pins.pop();
-            mapArea.removeChild(lastPin);
-            
-            const card = document.getElementById(`card-${pinCount}`);
-            card.classList.remove('active');
-            card.querySelector('input[type="text"]').value = '';
-            card.querySelector('textarea').value = '';
-            
-            const preview = document.getElementById(`preview-${pinCount}`);
-            const placeholder = document.getElementById(`placeholder-${pinCount}`);
-            const fileInput = card.querySelector('input[type="file"]');
-            
-            preview.style.display = 'none';
-            preview.src = '';
-            placeholder.style.display = 'block';
-            fileInput.value = '';
-
-            pinCount--;
-            updateUI();
+        function stop(e) {
+            if (!dragging) return;
+            e.stopPropagation();
+            dragging = false;
+            try { pinElement.releasePointerCapture(e.pointerId); } catch (err) {}
         }
+        pinElement.addEventListener('pointerup', stop);
+        pinElement.addEventListener('pointercancel', stop);
     }
 
-    // 텍스트 상태 업데이트
+    function undoPin() {
+        if (pins.length === 0) return;
+        var lastPin = pins.pop();
+        mapArea.removeChild(lastPin);
+
+        var card = document.getElementById('card-' + pinCount);
+        card.classList.remove('active');
+        card.querySelector('input[type="text"]').value = '';
+        card.querySelector('textarea').value = '';
+
+        var preview = document.getElementById('preview-' + pinCount);
+        var placeholder = document.getElementById('placeholder-' + pinCount);
+        var fileInput = document.getElementById('file-' + pinCount);
+
+        preview.style.display = 'none';
+        preview.removeAttribute('src');
+        placeholder.textContent = '📷 터치하여 사진 추가';
+        fileInput.value = '';
+
+        pinCount--;
+        updateUI();
+    }
+
     function updateUI() {
-        statusText.innerText = `지도를 클릭하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: ${pinCount}/${maxPins})`;
+        statusText.textContent = '지도를 터치하여 각 주제에 맞는 지역을 표시하고 조사해봅시다. (현재: ' + pinCount + '/' + maxPins + ')';
         undoBtn.disabled = (pinCount === 0);
     }
 
-    // 사진 미리보기 로드
-    function previewPhoto(event, index) {
-        const file = event.target.files[0];
-        if (file) {
-            const preview = document.getElementById(`preview-${index}`);
-            const placeholder = document.getElementById(`placeholder-${index}`);
-            
-            preview.src = URL.createObjectURL(file);
-            preview.style.display = 'block';
-            placeholder.style.display = 'none';
+    undoBtn.addEventListener('click', undoPin);
+    document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+    /* ---------- 화면 폭에 맞춰 B4 용지를 자동 축소 ---------- */
+    var stage = document.getElementById('stage');
+    var sheet = document.getElementById('sheet');
+    var fitMode = true;
+
+    function applyScale() {
+        if (!fitMode) {
+            sheet.style.transform = 'none';
+            stage.style.height = 'auto';
+            stage.style.overflowX = 'auto';
+            stage.style.justifyContent = 'flex-start';
+            return;
         }
+        stage.style.overflowX = 'hidden';
+        stage.style.justifyContent = 'center';
+        var available = document.documentElement.clientWidth - 16;
+        var scale = Math.min(1, available / sheet.offsetWidth);
+        sheet.style.transform = 'scale(' + scale + ')';
+        stage.style.height = (sheet.offsetHeight * scale) + 'px';
     }
+
+    document.getElementById('zoomBtn').addEventListener('click', function () {
+        fitMode = !fitMode;
+        this.textContent = fitMode ? '🔍 원본 크기로 보기' : '↔️ 화면에 맞추기';
+        applyScale();
+    });
+
+    window.addEventListener('resize', applyScale);
+    window.addEventListener('orientationchange', function () { setTimeout(applyScale, 300); });
+    window.addEventListener('load', applyScale);
+    applyScale();
+})();
 </script>
 
 </body>
